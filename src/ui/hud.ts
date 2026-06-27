@@ -214,7 +214,7 @@ import { reconcileLootRolls as computeLootRollReconcile } from './loot_roll_reco
 import { lowHealthVignette } from './low_health';
 import { lowResourceView } from './low_resource';
 import { overworldDungeonPortals } from './map_dungeon_portals';
-import { trackedQuestMapMarkers } from './map_quest_markers';
+import { nearestQuestObjective, trackedQuestMapMarkers } from './map_quest_markers';
 import { type MapRegion, mapCanvasHeight, paintTerrainRows } from './map_terrain';
 import {
   filterMarketListings,
@@ -5243,6 +5243,46 @@ export class Hud {
         }
         ctx.restore();
       }
+    }
+    // tracked quest objective: a gold direction arrow pinned to the rim when the
+    // objective is off the minimap, or a diamond on the map when it's in range (#928 Tier 2)
+    const qArrowId = (this.selectedQuestLogId && this.sim.questLog.has(this.selectedQuestLogId))
+      ? this.selectedQuestLogId
+      : (this.sim.questLog.keys().next().value ?? null);
+    const qArrowCounts = qArrowId ? this.sim.questLog.get(qArrowId)?.counts : undefined;
+    const objective = nearestQuestObjective(qArrowId, qArrowCounts, p.pos.x, p.pos.z);
+    if (objective) {
+      const R = S / 2 - 7;
+      const dx = -(objective.x - p.pos.x) * pxPerYard; // +X is map-left
+      const dz = -(objective.z - p.pos.z) * pxPerYard;
+      const dist = Math.hypot(dx, dz);
+      const ang = Math.atan2(dz, dx);
+      ctx.save();
+      ctx.fillStyle = '#ffd24f';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1.5;
+      if (dist > R) {
+        ctx.translate(S / 2 + Math.cos(ang) * R, S / 2 + Math.sin(ang) * R);
+        ctx.rotate(ang);
+        ctx.beginPath();
+        ctx.moveTo(7, 0);
+        ctx.lineTo(-4, 5);
+        ctx.lineTo(-4, -5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        ctx.translate(S / 2 + dx, S / 2 + dz);
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(5, 0);
+        ctx.lineTo(0, 5);
+        ctx.lineTo(-5, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      ctx.restore();
     }
     ctx.translate(S / 2, S / 2);
     ctx.rotate(-p.facing); // canvas rotates clockwise; facing increases turning left

@@ -15,3 +15,20 @@ export function trackedQuestMapMarkers(
   if (!questId) return [];
   return questObjectiveLocations(questId, counts).filter((m) => m.z >= zMin && m.z < zMax);
 }
+
+/** The tracked quest's objective location nearest a point (for the minimap
+ *  direction arrow), with its planar distance, or null if none resolve. */
+export function nearestQuestObjective(
+  questId: string | null,
+  counts: readonly number[] | undefined,
+  fromX: number,
+  fromZ: number,
+): (QuestMapMarker & { dist: number }) | null {
+  if (!questId) return null;
+  let best: (QuestMapMarker & { dist: number }) | null = null;
+  for (const m of questObjectiveLocations(questId, counts)) {
+    const dist = Math.hypot(m.x - fromX, m.z - fromZ);
+    if (!best || dist < best.dist) best = { ...m, dist };
+  }
+  return best;
+}

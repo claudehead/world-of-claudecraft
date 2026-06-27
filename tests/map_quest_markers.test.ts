@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { QUESTS } from '../src/sim/data';
 import { resolveObjectiveLocations } from '../src/sim/quests/quest_objective_locator';
-import { trackedQuestMapMarkers } from '../src/ui/map_quest_markers';
+import { nearestQuestObjective, trackedQuestMapMarkers } from '../src/ui/map_quest_markers';
 
 // a quest with at least one resolvable objective location
 const quest = Object.values(QUESTS).find((q) => q.objectives.some((o) => resolveObjectiveLocations(o)))!;
@@ -22,5 +22,21 @@ describe('trackedQuestMapMarkers', () => {
     const minZ = Math.min(...all.map((m) => m.z));
     // a band entirely below the lowest marker should yield none
     expect(trackedQuestMapMarkers(quest.id, undefined, minZ - 50, minZ - 10)).toEqual([]);
+  });
+});
+
+describe('nearestQuestObjective', () => {
+  it('returns null when no quest is tracked', () => {
+    expect(nearestQuestObjective(null, undefined, 0, 0)).toBeNull();
+  });
+
+  it('returns the closest objective to the given point, with its distance', () => {
+    const all = trackedQuestMapMarkers(quest.id, undefined, -100000, 100000);
+    const target = all[0];
+    // ask from a point right next to the first location
+    const near = nearestQuestObjective(quest.id, undefined, target.x + 1, target.z + 1);
+    expect(near).toBeTruthy();
+    const expectedMin = Math.min(...all.map((m) => Math.hypot(m.x - (target.x + 1), m.z - (target.z + 1))));
+    expect(near!.dist).toBeCloseTo(expectedMin, 5);
   });
 });
